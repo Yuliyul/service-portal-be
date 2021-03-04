@@ -21,7 +21,7 @@ export class KassesService {
     const newKasse = new this.KasseModel(KasseDto);
     const filter = { domainID: newKasse.domainID, kasse: newKasse.kasse };
     // newKasse.save();
-    let result = this.KasseModel.findOneAndUpdate(filter, newKasse, {
+    const result = this.KasseModel.findOneAndUpdate(filter, newKasse, {
       new: true,
       upsert: true,
     });

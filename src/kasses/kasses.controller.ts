@@ -10,9 +10,9 @@ import {
   HttpStatus,
   Delete,
 } from '@nestjs/common';
+import { ApiProperty, ApiResponse } from '@nestjs/swagger';
 import { Request } from 'express';
-import { CreateKasseDto } from './dto/create-kasse.dto';
-import { UpdateKasseDto } from './dto/update-kasse.dto';
+import { BaseKasseDto, ByIdDto, CreateKasseDto, UpdateKasseDto } from './dto';
 import { KassesService } from './kasses.service';
 
 @Controller('kasses')
@@ -25,7 +25,14 @@ export class KassesController {
   }
 
   @Get(':id')
-  getOne(@Param() params) {
+  @ApiProperty({
+    name: 'id',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    type: BaseKasseDto,
+  })
+  getOne(@Param() params: ByIdDto) {
     return this.KassesService.getOne(params.id);
   }
 
