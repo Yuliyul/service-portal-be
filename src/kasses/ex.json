@@ -1,0 +1,29 @@
+[
+  {
+    "downSpeed": [],
+    "uploadSpeed": [],
+    "printer": [],
+    "FiscalLastLine": [],
+    "terminalLastLine": [],
+    "phpLastLine": [],
+    "_id": "6040d71766b1932de0526110",
+    "domainID": 189,
+    "kasse": 1,
+    "ChVersion": "88.0.4324.190",
+    "FFVersion": "86.0",
+    "__v": 0,
+    "arch": "x64",
+    "cpu": "Intel(R) Core(TM) i7-8750H CPU @ 2.20GHz",
+    "createdAt": "2021-03-04T12:48:23.718Z",
+    "diskСFreeSpace": "49.2 GB",
+    "diskСSpace": "113.5 GB",
+    "externalUrl": "https://wicked-deer-38.loca.lt",
+    "extip": "5.105.2.44",
+    "freesysmem": "638.3 MB",
+    "osname": "Windows_NT",
+    "platform": "win32",
+    "totalmem": "7.8 GB",
+    "updatedAt": "2021-03-04T12:48:23.718Z",
+    "uptime": 95389
+  }
+]
