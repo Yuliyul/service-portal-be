@@ -21,6 +21,11 @@ export class KassesService {
     const newKasse = new this.KasseModel(KasseDto);
     const filter = { domainID: newKasse.domainID, kasse: newKasse.kasse };
     // newKasse.save();
-    return this.KasseModel.findOneAndUpdate(filter, newKasse, { new: true });
+    let result = this.KasseModel.findOneAndUpdate(filter, newKasse, {
+      new: true,
+      upsert: true,
+    });
+    console.log(result);
+    return result;
   }
 }

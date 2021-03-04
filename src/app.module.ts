@@ -9,7 +9,10 @@ import { KassesModule } from './kasses/kasses.module';
     MongooseModule.forRoot(
       `mongodb+srv://yuliya:kRZJB9MfbkvGtjv@cluster0.odwjp.mongodb.net/localmachines`,
       {
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
         useCreateIndex: true,
+        useFindAndModify: false,
       },
     ),
   ],
