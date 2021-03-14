@@ -2,7 +2,7 @@ export class CreateKasseDto {
   platform: string;
   osname: string;
   arch: string;
-  uptime: string;
+  uptime: number;
   freesysmem: string;
   totalmem: string;
   cpu: string;
@@ -21,4 +21,7 @@ export class CreateKasseDto {
   printer: Array<any>;
   uploadSpeed: Array<string>;
   downSpeed: Array<string>;
+  tseOn: boolean;
+  tseModule: string;
+  tseEFRType: string;
 }

@@ -11,5 +11,6 @@ export function appConfig() {
       useCreateIndex: true,
       useFindAndModify: false,
     },
+    jws_secret: get('SECRET').required().asString(),
   };
 }
