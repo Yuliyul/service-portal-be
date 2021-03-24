@@ -2,10 +2,24 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Mixed } from 'mongoose';
 export type KasseDocument = Kasse & Document;
 import * as mongoose from 'mongoose';
+
+@Schema()
+export class Timeout {
+  @Prop()
+  timeout: Number;
+
+  @Prop()
+  moment: Date;
+}
+export const TimeoutSchema = SchemaFactory.createForClass(Timeout);
+
 @Schema({
   timestamps: true,
 })
 export class Kasse extends Document {
+  @Prop()
+  timeouts: Timeout[];
+
   @Prop()
   platform: String;
 

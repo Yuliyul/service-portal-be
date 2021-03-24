@@ -1,37 +1,213 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, HttpService, Inject } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { KasseDocument, Kasse } from './schemas/kasse.schema';
+import { Cron } from '@nestjs/schedule';
+import { KasseDocument, Kasse, Timeout } from './schemas/kasse.schema';
 import { CreateKasseDto } from './dto/create-kasse.dto';
 import { UpdateKasseDto } from './dto/update-kasse.dto';
 import { from } from 'rxjs';
 import { Model } from 'mongoose';
+const qs = require('querystring');
 import { ByIdDto } from './dto/by-id.dto';
+import { AxiosResponse } from 'axios';
+import { ConfigService } from '@nestjs/config';
+import { DomainsService } from './../domains/domains.service';
+import { ImportsService } from './../imports/imports.service';
+
 @Injectable()
 export class KassesService {
   constructor(
     @InjectModel(Kasse.name)
     private KasseModel: Model<Kasse>,
+    private readonly httpService: HttpService,
+    private config: ConfigService,
+    private DomainsService: DomainsService,
+    private ImportService: ImportsService,
   ) {}
-  async getAll(): Promise<Kasse[]> {
-    return this.KasseModel.find().exec();
+  async generateFilter(cond?: any): Promise<any> {
+    let filter: any = {};
+    if (cond.domainID) filter.domainID = cond.domainID;
+    if (cond.tseOn) filter.tseOn = cond.tseOn;
+    if (cond.q) {
+      const ids = await this.DomainsService.getIds(cond.q);
+      filter.domainID = { $in: ids };
+    }
+    return filter;
   }
+  async getAll(cond?: any): Promise<Kasse[]> {
+    if (cond && typeof cond._end != 'undefined') {
+      let limit = <number>(cond._end - cond._start);
+      let skip_qnt = <number>(cond._start - 0);
+      let order = <number>(cond._order == 'ASC' ? 1 : -1);
+      let sort_field = <string>cond._sort;
+      var sort_cond = {};
+      sort_cond[sort_field] = order;
+      var filter = await this.generateFilter(cond);
+      return this.KasseModel.find(filter)
+        .limit(limit)
+        .skip(<number>skip_qnt)
+        .sort(sort_cond)
+        .exec();
+    } else return this.KasseModel.find().exec();
+  }
+
   async getOne(id: string): Promise<KasseDocument> {
     return this.KasseModel.findById(id);
   }
+
   async add(KasseDto: UpdateKasseDto) {
+    try {
+      const newKasse = new this.KasseModel(KasseDto);
+      const filter = { domainID: newKasse.domainID, kasse: newKasse.kasse };
+      let isExist = await this.KasseModel.findOne(filter);
+      if (isExist) {
+        let toUpdate = Object.assign(isExist, newKasse, { _id: isExist._id });
+        return await this.KasseModel.findByIdAndUpdate(
+          isExist._id,
+          toUpdate,
+        ).catch((error) => {
+          console.log(error);
+        });
+      }
+      return newKasse.save().catch((error) => {
+        console.log(error);
+      });
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  async addTimeout(KasseDto: UpdateKasseDto) {
     const newKasse = new this.KasseModel(KasseDto);
     const filter = { domainID: newKasse.domainID, kasse: newKasse.kasse };
     let isExist = await this.KasseModel.findOne(filter);
     if (isExist) {
-      let toUpdate = Object.assign(isExist, newKasse, { _id: isExist._id });
-      return await this.KasseModel.findByIdAndUpdate(isExist._id, toUpdate);
-      // return toUpdate.save();
+      isExist.timeouts = isExist.timeouts.concat(newKasse.timeouts);
+      return isExist.updateOne();
     }
     return newKasse.save();
   }
+
   async restart(KasseId: ByIdDto): Promise<string> {
     const PC = await this.KasseModel.findById(KasseId);
     if (typeof PC.externalUrl != 'undefined')
       return PC.externalUrl + '/restart';
+  }
+
+  async total(cond?: any): Promise<number> {
+    var filter = await this.generateFilter(cond);
+    return await this.KasseModel.countDocuments(filter);
+  }
+  //query every hour
+  // @Cron('0 * * * * ')
+  // @Cron('20 * * * * * ')
+  async OneDayCron() {
+    let uri = this.config.get<string>('KASSE_URI');
+    const params = qs.stringify({
+      secret_key: this.config.get<string>('SECRET_API'),
+    });
+    const responce = await this.httpService
+      .post(uri + 'globalapi/login', params, {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+      })
+      .toPromise();
+    let responce2: AxiosResponse<any>;
+    if (typeof responce.data.token != 'undefined') {
+      responce2 = await this.httpService
+        .get(uri + 'globalapi/tse_info?token=' + responce.data.token)
+        .toPromise();
+    }
+    if (typeof responce2.data) {
+      var result = responce2.data;
+      result.forEach((element) => {
+        let info = {
+          domainName: element.login,
+          domainID: element.id,
+          fiscal_export_sw: element.fiscal_export_sw,
+          fiscal_export_efr: element.fiscal_export_efr,
+        };
+        this.DomainsService.create(info);
+        let resultKasse = element.kasses;
+        let domain_id: number = element.id;
+        if (typeof resultKasse != 'undefined')
+          resultKasse.forEach((kasse) => {
+            let kasseinfo: UpdateKasseDto = {
+              domainID: domain_id,
+              kasse: kasse.id,
+              tseOn: kasse.tse_on,
+              tseModule: kasse.tse_module,
+            };
+            this.add(kasseinfo);
+          });
+      });
+    }
+  }
+  @Cron('20 * * * * * ')
+  async GetTimeoutsCron() {
+    let uri = this.config.get<string>('KASSE_URI');
+    const params = qs.stringify({
+      secret_key: this.config.get<string>('SECRET_API'),
+    });
+    const responce = await this.httpService
+      .post(uri + 'globalapi/login', params, {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+      })
+      .toPromise();
+
+    let responce2: AxiosResponse<any>;
+    if (typeof responce.data.token != 'undefined') {
+      var importTimeout = await this.ImportService.getLast({
+        action: 'timeouts',
+      });
+      // console.log(importTimeout);
+      // prettier-ignore
+      const condition:string = (importTimeout && importTimeout.externalId) ? `&last_import=${importTimeout.externalId}`:"";
+      responce2 = await this.httpService
+        .get(uri + 'globalapi/tse_log?token=' + responce.data.token + condition)
+        .toPromise();
+    }
+    if (typeof responce2.data != 'undefined') {
+      // console.log(responce2.data);
+
+      const result = Object.values(responce2.data);
+
+      // [].sort.call(result, function (a, b) {
+      //   console.log(a);
+      //   return a.id - b.id;
+      // });
+      // console.log(result);
+      // console.log('length');
+
+      // console.log(result.length);
+      if (result.length > 0) {
+        result.forEach((element) => {
+          let info = {
+            domainID: element['domain_id'],
+            kasse: element['kasse_id'],
+            timeouts: [
+              {
+                timeout: element['timeout'],
+                moment: new Date(element['timeout_moment']),
+              },
+            ],
+          };
+          try {
+            this.addTimeout(info);
+          } catch (error) {
+            console.error(error);
+          }
+        });
+
+        const lastElement = result.pop();
+        // console.log(lastElement);
+        await this.ImportService.create({
+          action: 'timeouts',
+          externalId: lastElement['id'],
+        });
+      }
+    }
   }
 }

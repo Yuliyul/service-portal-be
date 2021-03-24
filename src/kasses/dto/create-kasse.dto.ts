@@ -1,3 +1,5 @@
+import { Timeout } from './../schemas/kasse.schema';
+
 export class CreateKasseDto {
   platform: string;
   osname: string;
@@ -24,4 +26,5 @@ export class CreateKasseDto {
   tseOn: boolean;
   tseModule: string;
   tseEFRType: string;
+  timeouts: Array<Timeout>;
 }

@@ -10,6 +10,8 @@ import { UsersModule } from './users/users.module';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { APP_GUARD } from '@nestjs/core/constants';
 import { ScheduleModule } from '@nestjs/schedule';
+import { DomainsModule } from './domains/domains.module';
+import { ImportsModule } from './imports/imports.module';
 
 @Module({
   imports: [
@@ -25,6 +27,8 @@ import { ScheduleModule } from '@nestjs/schedule';
     AuthModule,
     UsersModule,
     ScheduleModule.forRoot(),
+    DomainsModule,
+    ImportsModule,
   ],
   controllers: [AppController],
   providers: [
