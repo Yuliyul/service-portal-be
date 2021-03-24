@@ -8,7 +8,18 @@ export type User = any;
 export class UsersService {
   constructor(private config: ConfigService) {}
 
-  private readonly users = [];
+  private readonly users = [
+    {
+      userId: 1,
+      username: 'john',
+      password: 'changeme',
+    },
+    {
+      userId: 2,
+      username: 'superadmin',
+      password: 'superadmin',
+    },
+  ];
 
   async findOne(username: string): Promise<User | undefined> {
     this.users.push({
