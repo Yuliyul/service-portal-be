@@ -144,7 +144,8 @@ export class KassesService {
       });
     }
   }
-  // @Cron('20 * * * * * ')
+  //every 5 minutes get new timeouts
+  @Cron('*/5 * * * * ')
   async GetTimeoutsCron() {
     let uri = this.config.get<string>('KASSE_URI');
     const params = qs.stringify({
