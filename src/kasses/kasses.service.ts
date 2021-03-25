@@ -98,7 +98,7 @@ export class KassesService {
     return await this.KasseModel.countDocuments(filter);
   }
   //query every hour
-  @Cron('45 22 * * * ')
+  @Cron('30 21 * * * ')
   // @Cron('20 * * * * * ')
   async OneDayCron() {
     let uri = this.config.get<string>('KASSE_URI');
