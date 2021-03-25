@@ -134,6 +134,7 @@ export class KassesService {
           resultKasse.forEach((kasse) => {
             let kasseinfo: UpdateKasseDto = {
               domainID: domain_id,
+              domainName: element.login,
               kasse: kasse.id,
               tseOn: kasse.tse_on,
               tseModule: kasse.tse_module,
