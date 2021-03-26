@@ -54,7 +54,7 @@ export class KassesService {
     return this.KasseModel.findById(id);
   }
 
-  async add(KasseDto: UpdateKasseDto) {
+  async add(KasseDto: UpdateKasseDto): Promise<void | Kasse> {
     try {
       const newKasse = new this.KasseModel(KasseDto);
       const filter = { domainID: newKasse.domainID, kasse: newKasse.kasse };
@@ -76,15 +76,21 @@ export class KassesService {
     }
   }
 
-  async addTimeout(KasseDto: UpdateKasseDto) {
+  async addTimeout(KasseDto: UpdateKasseDto): Promise<void | Kasse> {
     const newKasse = new this.KasseModel(KasseDto);
-    const filter = { domainID: newKasse.domainID, kasse: newKasse.kasse };
+    const filter = { domainID: KasseDto.domainID, kasse: KasseDto.kasse };
     let isExist = await this.KasseModel.findOne(filter);
     if (isExist) {
-      isExist.timeouts = isExist.timeouts.concat(newKasse.timeouts);
-      return isExist.updateOne();
+      KasseDto.timeouts.forEach((el) => {
+        isExist.timeouts.push(el);
+      });
+      return await isExist.save().catch((error) => {
+        console.log(error);
+      });
     }
-    return newKasse.save();
+    return await newKasse.save().catch((error) => {
+      console.log(error);
+    });
   }
 
   async restart(KasseId: ByIdDto): Promise<string> {
@@ -164,7 +170,6 @@ export class KassesService {
       var importTimeout = await this.ImportService.getLast({
         action: 'timeouts',
       });
-      // console.log(importTimeout);
       // prettier-ignore
       const condition:string = (importTimeout && importTimeout.externalId) ? `&last_import=${importTimeout.externalId}`:"";
       responce2 = await this.httpService
@@ -172,20 +177,12 @@ export class KassesService {
         .toPromise();
     }
     if (typeof responce2.data != 'undefined') {
-      // console.log(responce2.data);
-
-      const result = Object.values(responce2.data);
-
-      // [].sort.call(result, function (a, b) {
-      //   console.log(a);
-      //   return a.id - b.id;
-      // });
-      // console.log(result);
-      // console.log('length');
-
-      // console.log(result.length);
+      var result = Object.values(responce2.data);
+      result.sort((a: any, b: any) => {
+        return a.id - b.id;
+      });
       if (result.length > 0) {
-        result.forEach((element) => {
+        result.forEach(async (element) => {
           let info = {
             domainID: element['domain_id'],
             kasse: element['kasse_id'],
@@ -196,15 +193,10 @@ export class KassesService {
               },
             ],
           };
-          try {
-            this.addTimeout(info);
-          } catch (error) {
-            console.error(error);
-          }
+          let ttt = await this.addTimeout(info);
         });
 
         const lastElement = result.pop();
-        // console.log(lastElement);
         await this.ImportService.create({
           action: 'timeouts',
           externalId: lastElement['id'],
