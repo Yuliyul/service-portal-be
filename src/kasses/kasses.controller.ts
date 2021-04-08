@@ -52,6 +52,11 @@ export class KassesController {
     return this.KassesService.getOne(params.id);
   }
 
+  @Delete(':id')
+  async deleteKasse(@Param() params: ByIdDto) {
+    return this.KassesService.deleteOne(params.id);
+  }
+
   @Post('restart')
   async restart(@Body() KasseId: ByIdDto) {
     const restartUrl = await this.KassesService.restart(KasseId);

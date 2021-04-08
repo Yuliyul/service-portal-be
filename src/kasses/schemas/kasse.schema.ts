@@ -86,6 +86,8 @@ export class Kasse extends Document {
   tseModule: String;
   @Prop()
   tseEFRType: String;
+  @Prop()
+  isDeleted: Boolean;
 }
 export const KasseSchema = SchemaFactory.createForClass(Kasse);
 KasseSchema.index({ domainID: 1, kasse: 1 }, { unique: true });

@@ -31,8 +31,10 @@ export class KassesService {
       const ids = await this.DomainsService.getIds(cond.q);
       filter.domainID = { $in: ids };
     }
+    filter.isDeleted = { $ne: true };
     return filter;
   }
+
   async getAll(cond?: any): Promise<Kasse[]> {
     if (cond && typeof cond._end != 'undefined') {
       let limit = <number>(cond._end - cond._start);
@@ -42,18 +44,65 @@ export class KassesService {
       var sort_cond = {};
       sort_cond[sort_field] = order;
       var filter = await this.generateFilter(cond);
-      return this.KasseModel.find(filter)
-        .limit(limit)
-        .skip(<number>skip_qnt)
-        .sort(sort_cond)
-        .exec();
+      if (sort_field == 'id') order = -1;
+      if (sort_field == 'id' || sort_field == 'timeouts_count')
+        return await this.KasseModel.aggregate([
+          {
+            $project: {
+              timeouts: { $ifNull: ['$timeouts', []] },
+              platform: 1,
+              osname: 1,
+              arch: 1,
+              uptime: 1,
+              freesysmem: 1,
+              totalmem: 1,
+              cpu: 1,
+              domainID: 1,
+              kasse: 1,
+              diskСSpace: 1,
+              diskСFreeSpace: 1,
+              extip: 1,
+              phpLastLine: 1,
+              terminalLastLine: 1,
+              FiscalLastLine: 1,
+              externalUrl: 1,
+              FFVersion: 1,
+              ChVersion: 1,
+              domainName: 1,
+              printer: 1,
+              uploadSpeed: 1,
+              downSpeed: 1,
+              tseOn: 1,
+              tseModule: 1,
+              tseEFRType: 1,
+              timeouts_count: { $size: { $ifNull: ['$timeouts', []] } },
+              id: '$_id',
+            },
+          },
+          // { $find: filter },
+          { $limit: limit },
+          { $skip: skip_qnt },
+          { $sort: { timeouts_count: order } },
+        ]);
+      else
+        return this.KasseModel.find(filter)
+          .limit(limit)
+          .skip(skip_qnt)
+          .sort(sort_cond)
+          .exec();
     } else return this.KasseModel.find().exec();
   }
 
   async getOne(id: string): Promise<KasseDocument> {
     return this.KasseModel.findById(id);
   }
-
+  async deleteOne(id: string): Promise<void | Kasse> {
+    return await this.KasseModel.findByIdAndUpdate(id, {
+      isDeleted: true,
+    }).catch((error) => {
+      console.log(error);
+    });
+  }
   async add(KasseDto: UpdateKasseDto): Promise<void | Kasse> {
     try {
       const newKasse = new this.KasseModel(KasseDto);

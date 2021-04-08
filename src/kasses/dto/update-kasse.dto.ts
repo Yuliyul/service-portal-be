@@ -26,4 +26,5 @@ export class UpdateKasseDto {
   tseModule?: string;
   tseEFRType?: string;
   timeouts?: Array<Timeout>;
+  isDeleted?: boolean;
 }
