@@ -39,12 +39,12 @@ export class KassesService {
     if (cond && typeof cond._end != 'undefined') {
       let limit = <number>(cond._end - cond._start);
       let skip_qnt = <number>(cond._start - 0);
-      let order = <number>(cond._order == 'ASC' ? 1 : -1);
+      let orderSort = <number>(cond._order == 'ASC' ? 1 : -1);
       let sort_field = <string>cond._sort;
       var sort_cond = {};
-      sort_cond[sort_field] = order;
-      var filter = await this.generateFilter(cond);
-      if (sort_field == 'id') order = -1;
+      sort_cond[sort_field] = orderSort;
+      var filterData = await this.generateFilter(cond);
+      if (sort_field == 'id') orderSort = -1;
       if (sort_field == 'id' || sort_field == 'timeouts_count')
         return await this.KasseModel.aggregate([
           {
@@ -79,16 +79,16 @@ export class KassesService {
               id: '$_id',
             },
           },
-          // { $find: filter },
-          { $limit: limit },
+          { $match: filterData },
+          { $sort: { timeouts_count: orderSort, _id: 1 } },
           { $skip: skip_qnt },
-          { $sort: { timeouts_count: order } },
+          { $limit: limit },
         ]);
       else
-        return this.KasseModel.find(filter)
-          .limit(limit)
-          .skip(skip_qnt)
+        return this.KasseModel.find(filterData)
           .sort(sort_cond)
+          .skip(skip_qnt)
+          .limit(limit)
           .exec();
     } else return this.KasseModel.find().exec();
   }
@@ -142,10 +142,15 @@ export class KassesService {
     });
   }
 
-  async restart(KasseId: ByIdDto): Promise<string> {
-    const PC = await this.KasseModel.findById(KasseId);
-    if (typeof PC.externalUrl != 'undefined')
-      return PC.externalUrl + '/restart';
+  async restart(KasseId: ByIdDto): Promise<Kasse> {
+    const PC = await this.KasseModel.findById(KasseId.id);
+    return PC;
+  }
+
+  async getPartiallyConnectedToTSE(): Promise<Kasse[]> {
+    const filter = { tseModule: { $ne: '' }, tseOn: false };
+    const kasses = await this.KasseModel.find(filter);
+    return kasses;
   }
 
   async total(cond?: any): Promise<number> {

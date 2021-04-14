@@ -40,6 +40,17 @@ export class KassesController {
     res.send(result);
   }
 
+  @Get('partconnected')
+  async partconnected(
+    @Req() request: express.Request,
+    @Response() res: express.Response,
+  ) {
+    console.log('partconnected');
+
+    const kasses = await this.KassesService.getPartiallyConnectedToTSE();
+    res.send(kasses);
+  }
+
   @Get(':id')
   @ApiProperty({
     name: 'id',
@@ -59,10 +70,12 @@ export class KassesController {
 
   @Post('restart')
   async restart(@Body() KasseId: ByIdDto) {
-    const restartUrl = await this.KassesService.restart(KasseId);
-    if (typeof restartUrl != 'undefined') {
+    const PC = await this.KassesService.restart(KasseId);
+    if (typeof PC != 'undefined' && typeof PC.externalUrl != 'undefined') {
+      const restartUrl = PC.externalUrl + '/restart';
       this.httpService.post(restartUrl);
-    }
+      return PC;
+    } else return 'nok';
   }
 
   @Post('add')
