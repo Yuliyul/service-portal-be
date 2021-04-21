@@ -25,7 +25,7 @@ export class KassesService {
   ) {}
   async generateFilter(cond?: any): Promise<any> {
     let filter: any = {};
-    if (cond.domainID) filter.domainID = cond.domainID;
+    if (cond.domainID) filter.domainID = parseInt(cond.domainID);
     if (cond.tseOn) filter.tseOn = cond.tseOn;
     if (cond.q) {
       const ids = await this.DomainsService.getIds(cond.q);
@@ -44,6 +44,7 @@ export class KassesService {
       var sort_cond = {};
       sort_cond[sort_field] = orderSort;
       var filterData = await this.generateFilter(cond);
+
       if (sort_field == 'id') orderSort = -1;
       if (sort_field == 'id' || sort_field == 'timeouts_count')
         return await this.KasseModel.aggregate([
@@ -207,6 +208,8 @@ export class KassesService {
   //every 5 minutes get new timeouts
   @Cron('*/5 * * * * ')
   async GetTimeoutsCron() {
+    console.log('every 5 minutes get new timeouts');
+
     let uri = this.config.get<string>('KASSE_URI');
     const params = qs.stringify({
       secret_key: this.config.get<string>('SECRET_API'),
@@ -232,6 +235,7 @@ export class KassesService {
     }
     if (typeof responce2.data != 'undefined') {
       var result = Object.values(responce2.data);
+
       result.sort((a: any, b: any) => {
         return a.id - b.id;
       });
@@ -244,6 +248,7 @@ export class KassesService {
               {
                 timeout: element['timeout'],
                 moment: new Date(element['timeout_moment']),
+                kasseId: element['id'],
               },
             ],
           };

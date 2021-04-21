@@ -10,6 +10,9 @@ export class Timeout {
 
   @Prop()
   moment: Date;
+
+  @Prop()
+  kasseId: Number;
 }
 export const TimeoutSchema = SchemaFactory.createForClass(Timeout);
 
