@@ -46,9 +46,27 @@ export class KassesController {
     @Response() res: express.Response,
   ) {
     console.log('partconnected');
-
     const kasses = await this.KassesService.getPartiallyConnectedToTSE();
     res.send(kasses);
+  }
+
+  @Get('downspeed')
+  @Public()
+  async downspeed(
+    @Req() request: express.Request,
+    @Response() res: express.Response,
+  ) {
+    const file = await this.KassesService.download();
+    res.send(file);
+  }
+  @Post('upspeed')
+  @Public()
+  async upspeed(
+    @Req() request: express.Request,
+    @Response() res: express.Response,
+  ) {
+    const file = await this.KassesService.download();
+    res.send(file);
   }
 
   @Get(':id')
@@ -83,7 +101,12 @@ export class KassesController {
   @Public()
   @HttpCode(HttpStatus.CREATED)
   @Header('Cache-Control', 'none')
-  add(@Body() CreateKasseDto: UpdateKasseDto) {
+  add(@Body() CreateKasseDto: UpdateKasseDto, @Req() req) {
+    if (typeof req.body.downSpeed.mbps != 'undefined')
+      CreateKasseDto.downSpeed = {
+        downSpeed: req.body.downSpeed.mbps,
+        moment: new Date(),
+      };
     return this.KassesService.add(CreateKasseDto);
   }
 

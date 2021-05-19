@@ -1,4 +1,4 @@
-import { Timeout } from './../schemas/kasse.schema';
+import { Timeout, DownSpeed } from './../schemas/kasse.schema';
 
 export class CreateKasseDto {
   platform: string;
@@ -22,7 +22,7 @@ export class CreateKasseDto {
   domainName: string;
   printer: Array<any>;
   uploadSpeed: Array<string>;
-  downSpeed: Array<string>;
+  downSpeed: DownSpeed;
   tseOn: boolean;
   tseModule: string;
   tseEFRType: string;

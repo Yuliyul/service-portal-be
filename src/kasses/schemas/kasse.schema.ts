@@ -16,6 +16,16 @@ export class Timeout {
 }
 export const TimeoutSchema = SchemaFactory.createForClass(Timeout);
 
+@Schema()
+export class DownSpeed {
+  @Prop()
+  downSpeed: Number;
+
+  @Prop()
+  moment: Date;
+}
+export const DownSpeedSchema = SchemaFactory.createForClass(DownSpeed);
+
 @Schema({
   timestamps: true,
 })
@@ -81,8 +91,8 @@ export class Kasse extends Document {
   printer: Mixed[];
   @Prop({ type: mongoose.Schema.Types.Mixed })
   uploadSpeed: Mixed;
-  @Prop({ type: mongoose.Schema.Types.Mixed })
-  downSpeed: Mixed;
+  @Prop()
+  downSpeed: DownSpeed[];
   @Prop()
   tseOn: Boolean;
   @Prop()

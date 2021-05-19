@@ -12,6 +12,8 @@ import { APP_GUARD } from '@nestjs/core/constants';
 import { ScheduleModule } from '@nestjs/schedule';
 import { DomainsModule } from './domains/domains.module';
 import { ImportsModule } from './imports/imports.module';
+import { WinstonModule } from 'nest-winston';
+import * as winston from 'winston';
 
 @Module({
   imports: [
@@ -29,6 +31,29 @@ import { ImportsModule } from './imports/imports.module';
     ScheduleModule.forRoot(),
     DomainsModule,
     ImportsModule,
+    WinstonModule.forRoot({
+      transports: [
+        //
+        // - Write all logs with level `error` and below to `error.log`
+        // - Write all logs with level `info` and below to `combined.log`
+        //
+        // new winston.transports.File({ filename: 'error.log', level: 'error' }),
+        new winston.transports.File({
+          filename: 'app_output.log',
+          maxFiles: 5,
+          maxsize: 10000000,
+        }),
+      ],
+      format: winston.format.combine(
+        winston.format.timestamp({
+          format: 'MM-DD-YYYY HH:mm:ss',
+        }),
+        winston.format.printf(
+          (info) => `${info.level}:  ${[info.timestamp]}: ${info.message}`,
+        ),
+        // winston.format.json(),
+      ),
+    }),
   ],
   controllers: [AppController],
   providers: [

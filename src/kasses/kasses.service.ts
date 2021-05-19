@@ -1,10 +1,10 @@
-import { Injectable, HttpService, Inject } from '@nestjs/common';
+import { Injectable, HttpService, Inject, LoggerService } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Cron } from '@nestjs/schedule';
 import { KasseDocument, Kasse, Timeout } from './schemas/kasse.schema';
 import { CreateKasseDto } from './dto/create-kasse.dto';
 import { UpdateKasseDto } from './dto/update-kasse.dto';
-import { from } from 'rxjs';
+import { empty, from } from 'rxjs';
 import { Model } from 'mongoose';
 const qs = require('querystring');
 import { ByIdDto } from './dto/by-id.dto';
@@ -12,6 +12,13 @@ import { AxiosResponse } from 'axios';
 import { ConfigService } from '@nestjs/config';
 import { DomainsService } from './../domains/domains.service';
 import { ImportsService } from './../imports/imports.service';
+import {
+  WINSTON_MODULE_PROVIDER,
+  WINSTON_MODULE_NEST_PROVIDER,
+} from 'nest-winston';
+import { Logger } from 'winston';
+import * as fs from 'fs';
+import * as path from 'path';
 
 @Injectable()
 export class KassesService {
@@ -22,7 +29,10 @@ export class KassesService {
     private config: ConfigService,
     private DomainsService: DomainsService,
     private ImportService: ImportsService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService,
   ) {}
+
   async generateFilter(cond?: any): Promise<any> {
     let filter: any = {};
     if (cond.domainID) filter.domainID = parseInt(cond.domainID);
@@ -110,19 +120,29 @@ export class KassesService {
       const filter = { domainID: newKasse.domainID, kasse: newKasse.kasse };
       let isExist = await this.KasseModel.findOne(filter);
       if (isExist) {
+        let tmp = isExist.downSpeed;
+        if (typeof KasseDto.downSpeed != 'undefined')
+          tmp.push(KasseDto.downSpeed);
         let toUpdate = Object.assign(isExist, newKasse, { _id: isExist._id });
+        toUpdate.downSpeed = tmp;
+        //if info more for 30 days - cut array
+        if (toUpdate.downSpeed.length > 4500)
+          toUpdate.downSpeed.splice(0, toUpdate.downSpeed.length - 4500);
         return await this.KasseModel.findByIdAndUpdate(
           isExist._id,
           toUpdate,
         ).catch((error) => {
           console.log(error);
+          this.logger.error(error);
         });
       }
       return newKasse.save().catch((error) => {
         console.log(error);
+        this.logger.error(error);
       });
     } catch (error) {
       console.log(error);
+      this.logger.error(error);
     }
   }
 
@@ -136,10 +156,12 @@ export class KassesService {
       });
       return await isExist.save().catch((error) => {
         console.log(error);
+        this.logger.error(error);
       });
     }
     return await newKasse.save().catch((error) => {
       console.log(error);
+      this.logger.error(error);
     });
   }
 
@@ -157,6 +179,20 @@ export class KassesService {
   async total(cond?: any): Promise<number> {
     var filter = await this.generateFilter(cond);
     return await this.KasseModel.countDocuments(filter);
+  }
+
+  async download(): Promise<Buffer> {
+    const filepath = path.join(__dirname, '..', '..', `50000000`);
+    const file = await new Promise<Buffer>((resolve, reject) => {
+      fs.readFile(filepath, {}, (err, data) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(data);
+        }
+      });
+    });
+    return file;
   }
   //query every hour
   @Cron('30 21 * * * ')
@@ -207,9 +243,13 @@ export class KassesService {
   }
   //every 5 minutes get new timeouts
   @Cron('*/5 * * * * ')
+  performCron() {
+    this.GetTimeoutsCron();
+  }
+
   async GetTimeoutsCron() {
     console.log('every 5 minutes get new timeouts');
-
+    this.logger.log('every 5 minutes get new timeouts');
     let uri = this.config.get<string>('KASSE_URI');
     const params = qs.stringify({
       secret_key: this.config.get<string>('SECRET_API'),
