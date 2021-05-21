@@ -11,8 +11,11 @@ import {
   HttpService,
   Delete,
   Response,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
 import { ApiProperty, ApiResponse, ApiHeader } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
 import * as express from 'express';
 import { BaseKasseDto, ByIdDto, CreateKasseDto, UpdateKasseDto } from './dto';
 import { KassesService } from './kasses.service';
@@ -61,12 +64,12 @@ export class KassesController {
   }
   @Post('upspeed')
   @Public()
-  async upspeed(
-    @Req() request: express.Request,
+  @UseInterceptors(FileInterceptor('file'))
+  uploadFile(
+    @UploadedFile() file: Express.Multer.File,
     @Response() res: express.Response,
   ) {
-    const file = await this.KassesService.download();
-    res.send(file);
+    res.sendStatus(200);
   }
 
   @Get(':id')
