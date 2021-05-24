@@ -19,6 +19,7 @@ import {
 import { Logger } from 'winston';
 import * as fs from 'fs';
 import * as path from 'path';
+import { rejects } from 'assert';
 
 @Injectable()
 export class KassesService {
@@ -123,11 +124,15 @@ export class KassesService {
         let tmp = isExist.downSpeed;
         if (typeof KasseDto.downSpeed != 'undefined')
           tmp.push(KasseDto.downSpeed);
-        let toUpdate = Object.assign(isExist, newKasse, { _id: isExist._id });
+        let toUpdate = Object.assign(isExist, newKasse, {
+          _id: isExist._id,
+          __v: isExist.__v,
+        });
         toUpdate.downSpeed = tmp;
         //if info more for 30 days - cut array
         if (toUpdate.downSpeed.length > 4500)
           toUpdate.downSpeed.splice(0, toUpdate.downSpeed.length - 4500);
+        // isExist.update();
         return await this.KasseModel.findByIdAndUpdate(
           isExist._id,
           toUpdate,
@@ -154,7 +159,10 @@ export class KassesService {
       KasseDto.timeouts.forEach((el) => {
         isExist.timeouts.push(el);
       });
-      return await isExist.save().catch((error) => {
+      // return await isExist.updateOne().catch((error) => {
+      return await this.KasseModel.findOneAndUpdate(filter, {
+        timeouts: isExist.timeouts,
+      }).catch((error) => {
         console.log(error);
         this.logger.error(error);
       });
@@ -174,6 +182,36 @@ export class KassesService {
     const filter = { tseModule: { $ne: '' }, tseOn: false };
     const kasses = await this.KasseModel.find(filter);
     return kasses;
+  }
+  async getStats(): Promise<number[]> {
+    return new Promise((resolve, reject) => {
+      try {
+        var stat = [];
+        this.KasseModel.distinct(
+          'domainID',
+          {
+            isDeleted: { $ne: true },
+          },
+          function (err, result) {
+            if (err) return err;
+            if (Array.isArray(result)) stat['domains_qnt'] = result.length;
+            else stat['domains_qnt'] = 0;
+          },
+        );
+        stat['domains_new'] = this.DomainsService.getNew();
+        stat['kasses_qnt'] = this.KasseModel.find({
+          isDeleted: { $ne: true },
+        }).countDocuments();
+        let monthAgo = new Date();
+        monthAgo.setDate(monthAgo.getMonth() - 1);
+        stat['kasses_new'] = this.KasseModel.find({
+          createdAt: { $gte: monthAgo },
+        }).countDocuments();
+        resolve(stat);
+      } catch (error) {
+        console.log(error);
+      }
+    });
   }
 
   async total(cond?: any): Promise<number> {

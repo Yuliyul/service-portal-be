@@ -60,4 +60,11 @@ export class DomainsService {
     });
     return ids_arr;
   }
+  async getNew(): Promise<void | number> {
+    let monthAgo = new Date();
+    monthAgo.setDate(monthAgo.getMonth() - 1);
+    return this.DomainModel.find({
+      createdAt: { $gte: monthAgo },
+    }).countDocuments();
+  }
 }

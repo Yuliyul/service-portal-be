@@ -53,6 +53,15 @@ export class KassesController {
     res.send(kasses);
   }
 
+  @Get('stat')
+  async stat(@Response() res: express.Response) {
+    console.log('stat');
+    const stat = await this.KassesService.getStats().then((results) => {
+      console.log(stat);
+      res.send(stat);
+    });
+  }
+
   @Get('downspeed')
   @Public()
   async downspeed(
